@@ -13,15 +13,6 @@
 
 #define G global.apdu.u.setup
 
-struct setup_wire {
-    uint32_t main_chain_id;
-    struct {
-        uint32_t main;
-        uint32_t test;
-    } hwm;
-    struct bip32_path_wire bip32_path;
-} __attribute__((packed));
-
 static bool ok(void) {
     UPDATE_NVRAM(ram, {
         copy_bip32_path_with_curve(&ram->baking_key, &global.path_with_curve);
@@ -46,19 +37,7 @@ static bool ok(void) {
     return true;
 }
 
-__attribute__((noreturn)) static void prompt_setup(ui_callback_t const ok_cb,
-                                                   ui_callback_t const cxl_cb) {
-    init_screen_stack();
-    push_ui_callback("Setup", copy_string, "Baking?");
-    push_ui_callback("Address", bip32_path_with_curve_to_pkh_string, &global.path_with_curve);
-    push_ui_callback("Chain", chain_id_to_string_with_aliases, &G.main_chain_id);
-    push_ui_callback("Main Chain HWM", number_to_string_indirect32, &G.hwm.main);
-    push_ui_callback("Test Chain HWM", number_to_string_indirect32, &G.hwm.test);
-
-    ux_confirm_screen(ok_cb, cxl_cb);
-}
-
-__attribute__((noreturn)) size_t handle_apdu_setup(__attribute__((unused)) uint8_t instruction) {
+size_t handle_apdu_setup(__attribute__((unused)) uint8_t instruction, volatile uint32_t* flags) {
     if (G_io_apdu_buffer[OFFSET_P1] != 0) THROW(EXC_WRONG_PARAM);
 
     uint32_t const buff_size = G_io_apdu_buffer[OFFSET_LC];
@@ -89,6 +68,8 @@ __attribute__((noreturn)) size_t handle_apdu_setup(__attribute__((unused)) uint8
     }
 
     prompt_setup(ok, delay_reject);
+    *flags = IO_ASYNCH_REPLY;
+    return 0;
 }
 
 #endif  // #ifdef BAKING_APP
