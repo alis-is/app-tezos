@@ -563,6 +563,7 @@ size_t handle_apdu_sign_with_hash(uint8_t instruction) {
 static int perform_signature(bool const on_hash, bool const send_hash) {
 #ifdef BAKING_APP
     write_high_water_mark(&G.parsed_baking_data);
+    ux_empty_screen();
 #else
     if (on_hash && G.hash_only) {
         memcpy(G_io_apdu_buffer, G.final_hash, sizeof(G.final_hash));
